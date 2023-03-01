@@ -1,0 +1,2122 @@
+---
+title: "R_notes"
+author: "Xian"
+date: "2/23/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+
+library(broom)
+library(car)
+library(DescTools)
+library(dplyr)
+library(dummies)
+library(GGally)
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+library(lmtest)
+library(lsr)
+library(mosaic)
+library(modelr)
+library(orcutt)
+library(olsrr)
+library(plotly)
+library(ppcor)
+library(psych)
+library(readxl)
+library(reticulate)
+library(survival)
+library(tidyverse)
+```
+
+
+Contents:
+1. Useful commands 
+2. data types and convert
+3. Semantics/Syntax of R
+4. Latex type the symbols
+5. Import/view/index data
+6. Create/manipulate data frame
+7. Save/Write data 
+8. Visualize with plots 
+9. Power analysis
+10. Check model assumptions
+11. Stats info (r/p/q/dnorm)
+12. Stats tests (t/anova/ancova/corr/manova/ancova)
+13. Effects (moderation/mediation)
+14. Fit regression models (lm/glm/rob/stepwise/mixed)
+15. Compare model fit (nested models)
+16. Additional plots (ROC/Network)
+
+
+
+
+===========================================================================
+# Useful commands 
+
+*create new chunk of R code:*
+1) Command + Option + I
+1) Ctrl + Option + I
+2) mannually type in '''{r} and '''
+*run current chunk of R code:*
+1) Command + Shift + Enter
+2) Command + Option + C
+*comment off and back on:*
+1) Command + Shift + C
+1) Ctrl + Shift + C
+*clear work space:*
+1) rm(list = ls())
+2) rm(nameOftheDForVar)
+*help functions:*
+1) ?round
+2) help(round)
+*math/calculate:*
+- `abs()`: returns the absolute value of numeric objects
+- `max()`: returns the largest element of a numeric vector
+- `min()`: returns the smallest element of a numeric vector
+- `sqrt()`: returns the square root of numeric objects
+- `sum()`: computes the sum of the elements of a numeric vector
+- `round()`: rounds a numeric object to a designated number of digits
+*useful others*
+- `install.packages('PackageName')`: install package
+- `library(PackageName)`: load in the package
+- `search()`: see loaded packages in the current env
+- `getwd()`: see current working directory
+- `setwd('ThePathYouWant')`: set the wd to another path
+- `list.files()`: see what files are available from the current wd
+- `who()`: names and describes the objects in the workspace
+
+
+
+===========================================================================
+# R data types and converting data type
+
+```{r}
+# numeric
+a1 = 12 # as.numeric() changes data type to num
+a2 = c(1,1,2,3,5,8,13) #combines elements into a vector
+a2
+# character
+b1 = toupper('the top') #change char to upper cases; tolower for lower cases
+b2 = '12'# as.character() changes data type to char
+b1
+# factor
+c1 = factor(b1) 
+c2 = factor(c(a1,a2,b1,b2)) #auto show all existing levels of the factor, but can also check using: levels() 
+c2
+# logical
+d1 = TRUE 
+d2 = (a1 == a2) #compares a1 with each of the elements in a2
+d3 = (length(a2) == nchar(b1)) #length() returns #elements; nchar() returns #of char within this element
+d3
+# data type:
+class(a1);class(a2) #get the class of the data, i.e. data type in R
+class(b1);class(b2)
+class(c1);class(c2)
+class(d1);class(d2)
+```
+
+
+
+===========================================================================
+# Semantics/Syntax of R:
+
+while/for/ifelse/function
+```{r}
+# switch 
+#loop through the list until find the match for the expression, return the matched value.
+#If the value evaluated is a number, that item of the list is returned.
+switch(2,"red","green","blue") 
+switch(4,"red","green","blue")
+#if expression is str, the matching named item’s value is returned
+switch("color", "color" = "red", "shape" = "square", "length" = 5) 
+switch("length", "color" = "red", "shape" = "square", "length" = 5)
+
+
+# while loop
+dice1 = c(1:6)
+dice2 = c(1:6)
+roll = c(sample(dice1,1),sample(dice2,1))
+#roll the two dices until they sum to 7
+while(sum(roll)!=7) {
+  roll = c(sample(dice1,1),sample(dice2,1))
+  print(sum(roll))}
+#flip coin until all three are Heads
+coin = c("Heads", "Tails")
+flip = rep("Tails", 3) #repeat 3 times
+while(any(flip != "Heads")) {
+  flip = sample(coin, size = 3, replace = TRUE)
+  print(flip)}
+
+
+# for loop
+for(i in 1:5) {
+  print(i + i)}
+#assign letter grades based on numeric points scored
+score <- c(73,68,81,95,74,85,92,60,77,88)
+letter <- rep(NA, 10)
+grades <- data.frame(score, letter)
+for(i in 1:nrow(grades)) {
+  if(grades$score[i] >= 90){
+    grades$letter[i] <- "A"
+  } else if(grades$score[i] < 90 & grades$score[i] >= 80) {
+    grades$letter[i] <- "B"
+  } else if(grades$score[i] < 80 & grades$score[i] >= 70) {
+    grades$letter[i] <- "C"
+  } else if(grades$score[i] < 70 & grades$score[i] >= 65) {
+    grades$letter[i] <- "D"
+  } else {grades$letter[i] <- "F"}} 
+grades
+# create a matrix of data and compute a new variable as the mean of every row
+set.seed(100)
+datamat <- matrix(data = round(runif(n = 25, min = 1, max = 7)), nrow = 5, ncol = 5)
+datamat <- cbind(datamat, avg=rep(NA, 5))
+for(i in 1:nrow(datamat)) {
+  datamat[i, "avg"] <- mean(datamat[i, 1:5])}
+datamat
+
+
+# if/(else if)/else
+if(2 > 2) {
+  print("something doesn't seem right")
+} else if(2 < 2) {
+  print("this doesn't seem any better")
+} else {
+  print("it would've been easier to go with '2 == 2'")}
+#The `ifelse` function consolidates the condition itself with the comands that should execute if it is TRUE vs. FALSE
+ifelse(test = 1 + 1 == 2, yes = "correct", no = "wrong")
+# if/else &func
+NHST = function(smp.mean, pop.mean, pop.std, smp.size) {
+  z.score = (smp.mean-pop.mean)/(pop.std/sqrt(smp.size))
+  p.value = 1-pnorm(abs(z.score),0,1)
+  tail = 2
+  alpha = .05/tail
+  decision = 0
+  if(p.value>alpha) {decision= 'retain null hypothesis'} 
+  else{decision= 'reject null hypothesis'}
+  print(z.score)
+  print(p.value)
+  print(decision)} 
+#input sample mean&size, pop mean&std; returns z/p/decision
+set.seed(12)
+data = rnorm(100, 16.5, 4.5)
+NHST(mean(data),15,8.5,length(data))
+NHST(mean(data),19,2.5,length(data))
+
+
+# Function
+plotreg = function(data, x, y, xname, yname) {
+  library(ggplot2)
+  graph <- ggplot(data = data, mapping = aes(x = x, y = y)) +
+    geom_point(color = "dark blue", position = "jitter") +
+    geom_smooth(method = "lm", color = "dark red", fill = "dark red", alpha = .1) +
+    labs(x = xname, y = yname) +
+    theme_bw()
+  return(graph)} 
+#Currently, our custom functions only exist in our active session of *R*
+#To retain them, we must save them as ".R" files:
+dump("plotreg", file = "plotreg.R")
+#Now, we can remove the `plotreg` function from our workspace 
+rm(plotreg)
+#and summon it through its saved source code
+source("plotreg.R")
+```
+
+
+
+===========================================================================
+# Latex type the symbols:
+
+$-\infty$
+$\sigma$
+$\beta$
+$\beta_1$
+$\beta^2$
+$\beta^{1/2}$
+$\hat{Y}$
+$\hat{\sigma}^2$
+$H_a:\space$
+$1\over{Cov(X,Y)}$
+$R^2=1-{SSE\over{SST}}$
+$\hat{\sigma}=\sqrt{\frac{SSE}{n-p-1}}$
+$$H_0: \beta_0=\beta_1 \\ H_a:\beta_0 \neq \beta_1$$
+$$\hat{b}_0=\bar{X}_G\qquad \hat{b}_1=\frac{(\frac{\bar{X}_2+\bar{X}_3}{2})-\bar{X}_1}{3}\qquad \hat{b}_2=\frac{\bar{X}_3-\bar{X}_2}{2}$$
+
+
+===========================================================================
+# Import/view/index data:
+
+```{r}
+library(car) 
+library(readxl) 
+
+# read in txt/csv/excel
+States = read.delim("example_input/data_P152.txt") #can also read in http://www.../data.txt
+States2 = read.csv("example_input/data_P152.csv",header = TRUE) 
+States3 = read.table("example_input/data_P152.csv",header = TRUE,sep = ",") 
+cd1 = read.table("example_input/data_classdata1.txt", header = TRUE)
+RT = read_excel("example_input/data_rt.xlsx",1) #the first sheet
+
+# view data
+States
+States2
+States3
+head(States) #shows first several rows of the df
+str(States) #structure of the data, variable-wise
+dim(States) #check dataframe dimension (nrows ncols)
+summary(States) #data summary of min, max, etc.
+describe(cd1) #more detailed descriptive summary
+
+# view data descriptives
+Freq(cd1$TimeGrp) #check the frequency of each speed category
+mean(cd1$Time)
+mean(cd1$Time, trim = .10) #trim the top 10% and buttom 10% of the data before calculating mean
+median(cd1$Time)
+mode(cd1$Time)
+library(lsr)
+modeOf(cd1$Time)
+range(cd1$Time)
+diff(range(cd1$Time))
+quantile(cd1$Time)
+IQR(cd1$Time)
+var(cd1$Time)
+sd(cd1$Time)
+sqrt(var(cd1$Time))
+describe(cd1$Time, IQR = TRUE)
+describe(winsor(cd1$Time, trim = .10))
+
+# index data
+States[,2] #index all rows, 2nd col; returns a vector 
+States[3,2] #index the 3rd row, 2nd col; returns a vector
+States[4,] #index the 4th row, all cols; returns a df
+States[1:3,c(2,3,7)] #index row 1-3, col 2,3,7; returns a df
+which(States$STATE=='AK') # check the index of 'AK' from the variable 'STATE'
+States$STATE[49] #print the data of this index to check if it's 'AK'
+States$STATE[States$STATE=='AK'] # alt to above, directly index the one with 'AK'; returns 'AK' if it's in the var
+```
+
+
+
+===========================================================================
+# Create/manipulate data frame:
+
+Create Dataframe
+```{r}
+# 1) hand-create dataframe
+chocolate <- 37
+vanilla <- 58
+mint.chip <- 25
+ice.cream <- cbind(chocolate, vanilla, mint.chip)
+rownames(ice.cream) <- "Observed" #assign row name 
+colnames(ice.cream) <- c("Chocolate", "Vanilla", "Mint Chip")
+ice.cream
+
+# 2)
+States = read.delim("example_input/data_P152.txt")
+# getting vectors of num
+y = States$Y
+x = States$X
+i = c(1:length(x)) 
+y_dev = y - mean(y)
+x_dev = x - mean(x)
+y_var = y_dev^2
+x_var = x_dev^2
+cov_xy = x_dev*y_dev
+# getting data-frame (tibble better than df)
+mydata = tibble(i,y,x,y_dev,x_dev,y_var,x_var,cov_xy)
+mydata
+
+# 3) 
+# getting vectors of num and factor
+height = c(61, 49, 55, 53, 63, 58)
+points = c(24, 88, 12, 49, 64, 39)
+cond= factor(c(1, 1, 2, 2, 1, 2), labels = c("dominant", "non-dominant"))
+# getting data-frame from vector
+bball = data.frame(condition, height, points)
+bball
+
+# 4) 
+# getting mat from vectors
+v2= cbind(i,y,x,y_dev,x_dev,y_var,x_var,cov_xy)
+# convert mat to tibble
+newData.tb = as_tibble(v2)
+newData.tb
+
+# 5)
+# getting matrix from nums
+v1=matrix(c(0.32,6,0,1,0,
+            0.42,5,0,0,0,
+            0.50,4,0,1,0,
+            0.62,3,1,0,0,
+            0.80,6,0,1,0,
+            0.87,5,1,0,1,
+            0.98,4,0,0,0),ncol=5,byrow=TRUE)
+# convert mat to df
+newData.df = as.data.frame(v1)
+# name each col for the new df
+names(newData.df) = c("carat","numcolor","VS","VVS","fair")
+newData.df
+```
+
+Manipulate Data
+```{r}
+# using dplyr
+library(dplyr)
+library(nycflights13)
+
+# dplyr::select
+# select the cols/vars you want; reorder the cols
+flights %>%
+  select(arr_time, month:dep_delay)
+flights %>% # reorder the cols with arr_time up front
+  select(arr_time, everything()) # everything() calls all unmentioned vars
+flights %>%
+  select(contains("time")) %>% #use contains()
+  rename(depart = dep_time,
+         arrive = arr_time)
+
+# dplyr::filter/top_n
+# apply certain criteria and extract only rows of data that fit those criteria
+flights %>%
+  filter(dest == "PDX") # get rows only flying to portland:
+flights %>%
+  filter(origin == "JFK", (dest == "BTV" | dest == "SEA"), month >= 10) # multiple restrictions
+flights %>%
+  select(arr_delay) %>%
+  top_n(n = 5, wt = arr_delay) #get the top 5 arr_delay rows 
+
+# dplyr::summarize
+# computing summary statistics from the raw data using functions, resulting in a small df
+weather %>%
+  summarize(mean = mean(temp, na.rm = TRUE), std_dev = sd(temp, na.rm = TRUE)) 
+weather %>%
+  dplyr::summarize(count = n(), sweltering = max(humid, na.rm = TRUE), soaked = max(precip, na.rm = TRUE))
+
+# dplyr::group_by
+# segments any subsequent output into levels of a factor
+weather %>%
+  group_by(month) %>% # group by a var when summarizing stats
+  dplyr::summarize(count = n(), # count data-entry/rows for the groupped var
+            mean = mean(temp, na.rm = TRUE),
+            std_dev = sd(temp, na.rm = TRUE))
+flights %>%
+  group_by(origin, carrier) %>% # group by two vars
+  dplyr::summarize(count = n())
+
+# dplyr::arrange
+# sort data in ascending or descending order based on values on one or more var
+flights %>%
+  arrange(desc(gain)) #desc: orange in descending order; default is ascending order
+flights %>%
+  group_by(dest) %>%
+  dplyr::summarize(num_flights = n()) %>%
+  arrange(desc(num_flights))
+
+# dplyr::mutate
+# create new variables within a data set by manipulating existing values
+flights %>%
+  mutate(hours = air_time / 60,
+         gain_per_hour = gain / hours)
+
+# dplyr::join
+# `inner_join`, one of several "join" functions within `dplyr`: merge two data frames into one
+flights %>%
+  inner_join(airlines, by = "carrier") # join by the var shared between both datasets
+flights %>%
+  inner_join(airports, by = c("dest" = "faa")) #dest is in airdata and faa is the same thing in df airports
+flights %>%
+  inner_join(weather, by = c("year", "month", "day", "hour", "origin")) #for multiple shared vars
+#bind dataframe by row: rbind(df1,df2)
+
+# dplyr + ggplot
+flights %>%
+  group_by(month) %>%
+  dplyr::summarize(delay = mean(arr_delay, na.rm = TRUE)) %>%
+  ggplot(aes(x=month, y= delay))+
+  geom_point()+
+  geom_line(group=1)
+
+# dplyr::gather
+# change the df from wide format to long format, keeping the pID column
+library(tidyr); library(dplyr)
+rmwide = read.table("example_input/rm.dat", header = TRUE)
+rmlong = rmwide %>% gather(key = "cond", value = "search", -pID) #change wide to long format
+rmwide; rmlong
+```
+
+
+```{r}
+# 1) filter data
+States = read.delim("example_input/data_P152.txt")
+States
+States[States$X>5,c(0:-1)]
+States[1:nrow(States),c('STATE','X','X1','Region')] #select all rows and specified columns
+subset(States, Y>=180 & X>10, select=c(STATE,X,X1,Region)) # select a subset of dataframe
+States=States %>% filter(STATE!="AK") %>% droplevels() # keeps the non-'AK'
+States$STATE[49] # check if this index has changed; it has (coz 'AK' has been dropped) 
+States$STATE[States$STATE=='AK'] # another way to check if 'AK' is still in the data
+TD= RT %>% filter(group=="0") # keeps group0 
+DP= RT %>% filter(group=="1") # keeps group1
+head(DP)
+# drop missing values from dataframe
+States$Y[States$Y<=180] = NA # set all the Y smaller than 180 to be NA
+States$Y #checking that there are indeed NA in the var Y of df States 
+subset(States, !is.na(Y), select=c(STATE,Y,X,X1,Region)) #subset, row selection restricts to non-NA
+States %>% filter(!is.na(Y)) #keep the non-NA in, leave out the NA
+States[complete.cases(States),] #selected rows that has TRUE to 'complete case', i.e. non-NA
+# drop missing values from vector
+vector = c(2, 4, NA, 7) #create a vector with missing value
+mean(vector) #mean cannot be calculated due to NA
+mean(vector, na.rm = TRUE) # calculate the mean by rm na
+vector[!is.na(vector)] #drop missing value
+vector[complete.cases(vector)] #a 2nd way to drop missing value
+na.omit(vector) #a 3rd way to drop missing value 
+na.exclude(vector) #a 4th way to drop missing value 
+
+
+# 2) sort data
+attach(mtcars)
+# sort by mpg
+newdata <- mtcars[order(mpg),] 
+# sort by mpg and cyl
+newdata <- mtcars[order(mpg, cyl),]
+#sort by mpg (ascending) and cyl (descending)
+newdata <- mtcars[order(mpg, -cyl),] 
+detach(mtcars)
+newdata
+
+
+# 3) cut num into categories
+cd1 = read.table("example_input/data_classdata1.txt", header = TRUE)
+cd1$Time
+#create another var 'TimeGrp' and divide time into several speed categories (setting the range for the cut)
+cd1$TimeGrp = cut(cd1$Time, breaks = c(35, 50, 65, 80, 95, 110, 125), labels = c("Fastest", "Fast", "Kinda Fast", "Slow-ish", "Slow", "Very Slow"))
+cd1$TimeGrp
+# create 2 size categories 
+newdata$newvar <- ifelse(newdata$drat > 3.5, 
+c("larger"), c("smaller")) 
+newdata
+# create 3 size categories 
+newdata$agecat[newdata$drat > 4] <- "largest"
+newdata$agecat[newdata$drat > 3 & newdata$drat <= 4] <- "Middle sized"
+newdata$agecat[newdata$drat <= 3] <- "smallest"
+newdata
+#create dummy variables
+library(dummies)
+letters = c( "a", "a", "b", "c", "d", "e", "f", "g", "h", "b", "b" ) 
+dummy( letters)
+cd1 = read.table("example_input/data_classdata1.txt", header = TRUE)
+mat = dummy(cd1$Stim)
+stim1 = mat[1:nrow(mat),1]
+stim2 = mat[1:nrow(mat),2]
+stim3 = mat[1:nrow(mat),3]
+cd1 %>% mutate(stim1_dummy=stim1,stim2_dummy=stim2,stim3_dummy=stim3)
+
+
+# 4) convert nominal to ordinal 
+DD=read.delim("example_input/data_diamonds.txt")
+head(DD)
+# create another two cols of var to add in df: one for VS (0=not VS, 1= is VS), one for VVS  
+DD=DD%>%mutate(VS=1*(clarity=="VS1")+1*(clarity=="VS2"),VVS=1*(clarity=="VVS1")+1*(clarity=="VVS2")) 
+summary(DD)
+# set the conversion criteria: what shall replace what
+conversion=c("D"=6,"E"=5,"F"=4,"G"=3,"H"=2,"I"=1,"J"=0)
+# use this conversion on a var; assign it as another var to df 
+DD$numcolor=conversion[DD$color] 
+DD=DD%>%mutate(fair=1*(cut=="Fair"))
+DD
+
+# fit a linaer reg model using dimond data from DD  
+fit=lm(price~carat+numcolor+VS+VVS+fair,data=DD)
+library(broom)
+tidy(fit)
+# get fitted values and errors
+fitted= as.integer(fitted(fit))
+errors = as.integer(DD$price-fitted(fit))
+DD = DD%>% mutate(fitted, errors)
+head(DD)
+# predict the prices of dimond data from newData.df, using the above fitted lm
+predicts = predict(fit,newData.df) #need to run previous block to read in newData.df 
+predicts
+
+```
+
+
+
+===========================================================================
+# Save data
+
+save dataframe to csv/txt/xls files
+```{r}
+# write df as csv
+write.csv(mydata,"example_output/states_df.csv", row.names = TRUE)
+# write df as txt
+write.table(DD, "example_output/dimond_fit_df.txt", append = FALSE, sep = ",", dec = ".", row.names = TRUE, col.names = TRUE)
+# write df as xlsx
+library("writexl")
+write_xlsx(newData.df,"example_output/dimond_test_df.xlsx")
+```
+
+save figure to .png/.tif/.jpg
+```{r}
+States = read.delim("example_input/data_P152.txt")
+gf_point(Y~X1,data=States) %>% gf_smooth(method="lm")
+ggsave('example_output/name_of_the_plot.jpg', width = 5, height = 3)
+```
+
+
+===========================================================================
+# Visualize with plots:
+
+*gf_points and ggpair:*
+```{r}
+States = read.delim("example_input/data_P152.txt")
+
+#gf_point
+p1= gf_point(Y~X1,data=States) %>% 
+  gf_smooth(method="lm")
+
+p2= gf_point(Y~X2,data=States) %>% 
+  gf_smooth(method="lm",se=TRUE,linetype=1,color="yellow") %>%
+  gf_labs(x="predictor X2",y="response Y")
+
+p3= gf_point(Y~X3,data=States) %>% 
+  gf_smooth(method="lm",se=TRUE,linetype=2,color="red") %>%
+  gf_labs(x="predictor X3",y="response Y")
+
+p4= gf_point(X1~X2,data=States, color = 'brown') %>% 
+  gf_smooth(method="lm",se=TRUE,linetype=3,color="black")%>%
+  gf_labs(x="predictor X2",y="predictor X1")
+
+p5= gf_point(X2~X3,data=States) %>% 
+  gf_smooth(method="lm",se=TRUE,linetype=4,color="purple")%>%
+  gf_labs(x="predictor X3",y="predictor X2")
+
+p6= gf_point(X1~X3,size=~Region,color=~Region,data=States) %>% 
+  gf_smooth(method="lm",se=TRUE,linetype=5)%>%
+  gf_labs(x="predictor X3",y="predictor X1")
+
+library(gridExtra)
+grid.arrange(p1,p2,p3,p4,p5,ncol=3)
+p6
+
+# arrange multiple graphs in one (example) and save
+conn = read_excel("example_input/data_conn.xls", sheet = 4)
+p1= gf_point(chg_score ~ reading,data=conn,xlab="SPL&SMC FC increase", ylab="score increase (post-pre)",
+             subtitle="partial.r.sq=0.14") %>% gf_smooth(method="lm")
+p2=gf_point(chg_score ~ listening,data=conn,xlab="listening", ylab="score increase (post-pre)",
+            subtitle="partial.r.sq=0.33") %>% gf_smooth(method="lm")
+p3=gf_point(chg_score ~ speaking,data=conn,xlab="speaking", ylab="score increase (post-pre)",
+            subtitle="partial.r.sq=0.28") %>% gf_smooth(method="lm")
+
+grid.arrange(p1,p2,p3,ncol=3,
+              top="Relationship Between the Change of FC & Score (Post-Pre)",
+              bottom="model r.squared=0.40, adj.r.sq=0.34")
+
+# ggpairs
+library(GGally)
+ggpairs(States%>%select(3:6), lower=list(continuous=wrap("smooth",method="lm",color="blue")),progress=F)
+ggpairs(States[,c(1,3,4,5,6)],lower=list(continuous=wrap("smooth",method="lm",color="blue")),progress=F)
+```
+
+*ggplots & defaultPlots:*
+```{r}
+RT = read_excel("example_input/data_rt.xlsx",1)
+
+library(ggforce) #for geom_sina
+# ggplots for point/line/bar/hist/boxplot/jitter/violin/sina
+p1 = ggplot(RT, aes(factor(group), ffmt)) + geom_point()
+p2 = ggplot(RT, aes(factor(group), ffmt)) + geom_boxplot()
+p3 = ggplot(RT, aes(group, ffmt))         + geom_line()  #geom_vline, geom_hline for vertical/horizontal lines
+p4 = ggplot(RT, aes(factor(group), ffmt)) + geom_jitter()
+p5 = ggplot(RT, aes(factor(group), ffmt)) + geom_violin()
+p6 = ggplot(RT, aes(factor(group), ffmt)) + geom_sina()
+p7 = ggplot(RT, aes(factor(group)))       + geom_bar()
+p8 = ggplot(data=RT, aes(x=cfmt))         + geom_bar()
+p9 = ggplot(data=RT, aes(x=cfmt))         + geom_histogram(color='black',fill='red',alpha=1/2)
+
+grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
+
+p1 = ggplot(RT, aes(factor(group), ffmt)) + geom_violin() + geom_sina()
+p2 = ggplot(RT, aes(factor(group), ffmt)) + geom_sina(aes(color=factor(group)))
+p3 = ggplot(RT, aes(factor(group), ffmt)) + geom_violin(alpha = 1/10) + geom_sina(aes(color=factor(group))) 
+p4 = ggplot(RT, aes(x= benton_acc, y = com, color = group) ) + geom_point() +
+     geom_smooth(method = "lm", alpha = .15, se = TRUE)
+grid.arrange(p1,p2,p3,p4,ncol=2)
+
+# alternatives
+hist(RT$ffmt,col="chocolate",breaks=15) #for p9 
+plot(RT$cfmt,RT$ffmt)
+scatterplot(ffmt~cfmt,data=RT)
+library(sinaplot) #for p6
+n_group = length(unique(RT$group))
+sinaplot(ffmt~group, data=RT, pch = 20, col = rainbow(n_group), method = "density", adjust = 1/20)
+gf_point(ffmt~benton_acc,color=~group, data=RT) %>% # for p4
+  gf_smooth(method="lm",se=TRUE,linetype=1,color="blue",group=~group) 
+
+```
+
+*ggplots & plotly:*
+```{r fig.height=5, fig.width=10}
+library(ggplot2) 
+diamonds[1:6, c(1:5, 7)] #diamond is one of the default R datasets
+set.seed(100) #get a random set of 100 numbers and fix this set (don't change)
+dia = diamonds[sample(nrow(diamonds), size = 100), ] #get a subset of diamond df (100 rows)
+dia
+
+# 1). 
+# Scaterplots
+#plotting the scatter of carat and price
+ggplot(data = dia, mapping = aes(x = carat, y = price)) + #map the var to aes properties of the plot
+  geom_point(mapping = aes(color = cut), shape = "triangle") #only when want to map var value to points do we use aes
+ggplot(data = dia, mapping = aes(carat, price)) +
+  geom_point(aes(color = cut, size = clarity), shape = 18) #adding addition properties to the points
+#adding another layer: the trendline divided by cut with different color (in full range)
+ggplot(data = dia, mapping = aes(x = carat, y = price)) +
+  geom_point(aes(color = cut, size=clarity), size = 5) +
+  geom_smooth(method = "lm", se = FALSE, aes(color = cut), fullrange=TRUE,linetype='twodash') 
+#adding another layer: the labels 
+ggplot(data = dia, aes(x = carat, y = price)) +
+  geom_point(aes(color = cut), size= 5) +
+  geom_smooth(method = "lm", color= 'black', se = FALSE, aes(lty = cut)) + #lty: line-type
+  labs(title = "Diamond Quality Scatterplot", x = "Carat Size", y = "Price in Dollars")
+#avoid overplotting 
+#(too many points in one graph so many points may overlay each other): **jittering** and **facetting**
+ggplot(data = diamonds[diamonds$price < 500, ], aes(x = carat, y = price)) +
+  geom_point(color = "blue") #e.g. many points overlay each other in this plot
+#this is **jitter**: jitter the points so that in graph, they slightly move position away from each other
+ggplot(data = diamonds[diamonds$price < 500, ], aes(x = carat, y = price)) +
+  geom_point(color = "blue", position = "jitter") 
+#this is another jitter 
+ggplot(data = diamonds[diamonds$price < 500, ], aes(x = carat, y = price)) +
+  geom_jitter(color = "blue")
+#this is **Facet wraps**: create separate plots at each level of a designated variable
+ggplot(data = diamonds[diamonds$price < 500, ], aes(x = carat, y = price)) +
+  geom_point() +
+  facet_wrap(~ cut)
+#this is **Facet grids**: create separate plots at every pairing of levels of 2 designated variables
+ggplot(data = diamonds[diamonds$price < 500, ], aes(x = carat, y = price)) +
+  geom_point(aes(color = depth), shape='triangle', size=1) +
+  facet_grid(clarity ~ cut) 
+
+# 2) 
+# Line graph / Line plot
+data = read_excel('example_input/sub2.xlsx'); data
+data$SemanticCent = as.numeric(data$SemanticCent) 
+plot(data$event,data$SemanticCent,type='b') #both x and y are continuous
+ggplot(data,aes(x=event,y=SemanticCent))+
+  geom_point(size=4,color='orange')+
+  geom_line(color='orange',lwd=3)
+# another example
+allsub = read.table('example_input/allsub_results.csv',header=TRUE,sep=',')
+allsub$sub.num=as.factor(allsub$sub.num)
+event = sort(unique(allsub$event))
+ggplot(allsub, aes(x=event,y=caus.z))+
+  geom_point(aes(color=sub.num))+
+  geom_line(aes(color=sub.num))+
+  scale_x_continuous(breaks=seq(1, max(allsub$event),2))+
+  scale_y_continuous(breaks=seq(-10, 10, 0.5))+
+  theme(axis.text.x = element_text(angle = 90))+
+  geom_vline(xintercept = event,lwd=0.1,linetype=6,color='blue')
+# with Errorbar
+corr = read.table('example_input/corr_results.csv',header=TRUE,sep=',')
+ggplot(corr, aes(x=sub.num,y=sem.caus.r))+
+  geom_point()+
+  geom_line(color='purple')+
+  scale_x_continuous(breaks=seq(1,28,1))+
+  geom_hline(yintercept = 0, lwd=2,alpha=0.3)+
+  geom_hline(yintercept = mean(corr$sem.caus.r), lwd=2,alpha=0.3,color='purple')+
+  geom_vline(xintercept=subjs,lwd=0.3,linetype=6,color='grey')+
+  ylab('semantic-causal r')+
+  xlab('subject number')+
+  geom_errorbar(aes(ymin=sem.caus.95ci.low, ymax=sem.caus.95ci.high), width = 0.2,lwd=0.5)
+
+# 3).
+# Bar graph (ggplot stats)
+# geom background computation for plotting called by stat_summary/stat_function from Hmisc
+library(Hmisc)
+#the default bar graph always has counts as y-axis
+ggplot(diamonds, aes(x = price)) +
+  geom_bar(aes(fill=cut))
+#calling mean from the stat_summary function, setting geom to be bar (resets the y-axis to mean)
+ggplot(diamonds, aes(x = cut, y = price)) +
+  stat_summary(fun.y = mean, geom = "bar")
+#adding additional layer (errorbar needs both SE and mean, so needs to be called from fun.data; so is confidence interval)
+ggplot(diamonds, aes(x = cut, y = price)) +
+  stat_summary(fun.y = mean, geom = "bar", aes(fill = clarity), position = 'dodge') +
+  stat_summary(fun.data= mean_se, geom= "errorbar", width= .25, aes(group= clarity), position= position_dodge(width= .9)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar", aes(group= clarity), position = position_dodge(width= .9)) 
+#adding additional layer of line (group by 1: one line through all points)
+ggplot(diamonds, aes(x = cut, y = price)) +
+  #stat_summary(fun.y = mean, geom = "bar", aes(fill = clarity), position = 'dodge') +
+  stat_summary(fun.y = mean, geom = "point", size = 2, col = "dark blue") +
+  stat_summary(fun.y = mean, geom = "line", aes(group = 1), lty = "dashed") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = .2)
+
+# 4). 
+# Boxplots 
+#boxplot for price (split by cut in filling color)
+ggplot(dia, aes(y = cut)) + 
+  geom_boxplot(aes(fill=cut)) 
+#boxplot for price by cut (with outliers specify and axis flip)
+ggplot(dia, aes(x = cut, y = price)) +
+  geom_boxplot(aes(fill = cut),  outlier.shape = "o", outlier.size = 5)  + #, outlier.color = "red", show.legend = FALSE
+  coord_flip()
+#plot the range
+allsub = read.table('example_input/allsub_results.csv',header=TRUE,sep=',')
+allsub$sub.num=as.factor(allsub$sub.num)
+library(dplyr)
+df = allsub %>% group_by(event)%>% 
+  summarize(count = n(), caus.z.mean = mean(caus.z, na.rm = TRUE), caus.z.min=range(caus.z,na.rm=TRUE)[1], caus.z.max=range(caus.z,na.rm=TRUE)[2])
+ggplot(df, aes(x=event))+
+  geom_linerange(aes(ymin=caus.z.min,ymax=caus.z.max),linetype=2,color="blue")+
+  geom_point(aes(y=caus.z.min),size=3,color="red")+
+  geom_point(aes(y=caus.z.max),size=3,color="red")+
+  theme_bw()+
+  ylab('Causal Centrality per event (range across subjects)')
+
+# 5)
+# Histograms
+#histogram: visualize the shape of distributions of data on a var
+ggplot(diamonds, aes(x = price)) +
+  geom_histogram(color = "blue", fill = "gold")+ 
+  theme_bw() # theme_classic() 
+#histogram added another layer (the normal curve with data mean/std)
+ggplot(diamonds, aes(x = price)) +
+  geom_histogram(aes(y = ..density..), color = "blue", fill = "gold") +
+  stat_function(fun = dnorm, args = list(mean = mean(diamonds$price), sd = sd(diamonds$price)), col = "dark red", lwd = 1.5) +
+  theme_classic()
+#another histogram with vlines for mean, median and mode
+library(dplyr)
+mode = (midwest %>% group_by(area) %>% summarise(count = n()) %>% arrange(desc(count)))$area[1]
+ggplot(midwest, aes(x=area)) +
+  geom_histogram(aes(y = ..density..), color='black', fill='pink', bins = 50) +
+  stat_function(fun=dnorm,args= list(mean= mean(midwest$area), sd= sd(midwest$area)), color='purple', lwd=1.5) + 
+  geom_vline(xintercept = c(mean(midwest$area), median(midwest$area), mode), color= c('green','yellow','blue'))
+
+# 6)
+# Areas under the curve
+#this is to generate two normally distributed datasets with different mean and sd 
+data1 = tibble(value = rnorm(1000, mean= 10, sd= 3))
+#this is the alpha value with p<.05 for either a two-tailed test or a one-tailed test
+alpha1 = qnorm(0.975,mean=10, sd=3)
+alpha1.left = qnorm(0.025,mean=10, sd=3)
+#this is for two-tailed test with p<.05 (so .025 on each tail); beta is the red shaded area 
+ggplot(data1, aes(value), xlim=c(0,20)) + 
+  stat_function(fun=dnorm,args=list(mean=10,sd=3),col="dark blue",lwd=1.5,xlim=c(0,25)) + # curve1
+  stat_function(fun=dnorm,args=list(mean=10,sd=3),col="dark blue",lwd=1.5,xlim=c(alpha1,25),geom = 'area',fill ='dark blue',alpha=0.5) + # area1: alpha
+  stat_function(fun=dnorm,args=list(mean=10,sd=3),col="dark blue",lwd=1.5,xlim=c(0,alpha1.left),geom ='area', fill ='dark blue',alpha=0.5) + # area2: alpha
+  stat_function(fun=dnorm,args=list(mean=18,sd=2),col="dark red",lwd=1.5,xlim=c(0,25)) + # curve2
+  stat_function(fun=dnorm,args=list(mean=18,sd=2),col="dark red",lwd=1.5,xlim=c(alpha1.left,alpha1),geom ='area',fill ='dark red',alpha = 0.5)+ # area2: beta
+  stat_function(fun=dnorm,args=list(mean=18,sd=2),col="dark red",lwd=1.5,xlim=c(alpha1,25),geom='area',fill ='dark blue',alpha = 0.5)+ # area3: power
+  geom_vline(xintercept = c( alpha1.left,alpha1), color='black',lwd=1) + #alpha threshold
+  labs(title='Two-Tailed p<.05; beta = red shaded area') +
+  theme_classic() 
+
+# 7) 
+# linking dots with lines
+#this is to link the dots to a specified horizontal line segment
+waldo = read.table("example_input/waldo.dat", header = TRUE)
+ggplot(waldo, aes(ID, search)) +
+  geom_segment(aes(x = 0, xend = 21, y = mean(search), yend = mean(search))) +
+  geom_point(aes(col = cond)) +
+  geom_segment(aes(x = ID, xend = ID, y = mean(search), yend = search), lty = 2, lwd = .5) +
+  theme_classic()
+#this is to plot dots to group means
+ggplot(waldo, aes(ID, search)) +
+  geom_segment(aes(x = 0, xend = 21, y = mean(search), yend = mean(search)), alpha = .25) +
+  geom_point(aes(col = cond)) +
+  geom_segment(aes(x = 1, xend = 6, y = mean(search[cond == "ctrl"]), yend = mean(search[cond == "ctrl"])), col = "red") +
+  geom_segment(aes(x = 7, xend = 12, y = mean(search[cond == "info"]), yend = mean(search[cond == "info"])), col = "green3") +
+  geom_segment(aes(x = 13, xend = 18, y = mean(search[cond == "time"]), yend = mean(search[cond == "time"])), col = "blue") +
+  geom_segment(aes(x = c(1:18), xend = c(1:18), y = search[1:18], yend = c(rep(mean(search[cond == "ctrl"]),6), rep(mean(search[cond=='info']),6), rep(mean(search[cond=='time']),6))), lty = 2) +
+  theme_classic()
+
+# 8)
+# plot matrix
+library(plot.matrix)
+mat = read.table('example_input/caus_super_matrix.csv',sep=',')
+mat = as.matrix(mat)
+mat[mat == 0] <- NA
+caus.super.mat = mat
+plot(caus.super.mat,border=NA,col=topo.colors,na.col="black",fmt.key="%.1f",xlab="event label", ylab="event label")
+
+# 9)
+# plotly
+library(ggplot2)
+library(plotly)
+myplot= ggplot(dia, aes(x= carat, y= price)) + 
+  geom_point(size=2, color = 'magenta')+
+  geom_smooth(method="lm", se=FALSE)
+#pass the ggplot to ggplotly
+ggplotly(myplot)
+```
+
+
+===========================================================================
+# Power analysis:
+
+```{r}
+library(pwr)
+#compare powers
+pwr.t.test(n=18, d=1, sig.level=.05,type='two.sample',alternative = 'two.sided')
+pwr.t.test(n=18, d=1, sig.level=.05,type='paired',alternative = 'two.sided')
+#compare sample size needed
+pwr.t.test(power=.8, d=.5, sig.level=.05, type='two.sample',alternative = 'two.sided')
+pwr.t.test(power=.8, d=.5, sig.level=.05, type='paired',alternative = 'two.sided')
+
+# t-test:
+# compute d (cohen's d) and ncp (non-centrality parameter)
+tpower = read.table('example_input/tpower.dat',header=T, sep=" "); tpower
+table = tpower%>% group_by(Condition) %>% summarize(mean = mean(Outcome),sd= sd(Outcome), n = n()); table
+n1 = table$n[1]; n2 = table$n[2]; mean1 = table$mean[1]; mean2 = table$mean[2]
+s1 = table$sd[1]; s2 = table$sd[2]; sp = sqrt((s1^2+s2^2)/2)
+d = (mean2-mean1)/sp; d #effect size
+delta = d*sqrt(50/2); delta #ncp (computed from d)
+# compute power from alpha, df, ncp:
+pt(q = qt(p=.975, df = 98), df=98, ncp=delta, lower=F) 
+# compute power from d, n directly:
+pwr.t.test(n=50,d=d, sig.level=.05,type='two.sample',alternative='two.sided')
+#use ggplot for the null and alternative distributions with ncp:
+data1 = tibble(value = rt(1000, df= 49, ncp= delta))
+ggplot(data1, aes(value), xlim=c(-10,10)) + 
+  stat_function(fun=dt,args=list(df=49, ncp=delta),col="dark blue",lwd=1.5,xlim=c(-10,10))+#curve for alt
+  stat_function(fun=dt,args=list(df=49),col="dark red",lwd=1.5,xlim=c(-10,10))+#curve for null
+  theme_classic() 
+
+# f-test
+#determine the power for a test on the covariate's effect 
+fpower = read.table('example_input/fpower.dat',header=T, sep=" ")
+null = lm(Outcome~Group, data=fpower)
+full = lm(Outcome~Group+Covariate, data=fpower)
+null.r2 = glance(reg0)$r.squared
+full.r2 = glance(reg1)$r.squared
+f2 = (full.r2-null.r2)/(1-full.r2)
+ncp = f2*99
+pf(q = qf(.95, 3, 95),df1=3,df2=95,ncp=ncp,lower=F)
+pwr.f2.test(u=3, v=95, f2= f2, sig.level = .05)
+```
+
+
+
+===========================================================================
+# Check model assumptions:
+
+```{r}
+#1) Checking for outlier
+oly=read.table('example_input/olympics.dat',header=TRUE)
+head(oly)
+fit = lm(rating~comps+years,oly)
+# i. leverage: hatvalue hii
+oly$lvg = hatvalues(fit)
+oly[1:5, c(2,3,4)]
+# ii. discrepancy
+rstudent(fit)
+# iii. influence
+dffits(fit)
+cooks.distance(fit)
+library(olsrr)
+ols_plot_dffits(fit)
+ols_plot_cooksd_chart(fit)
+ols_plot_cooksd_bar(fit)
+dfbetas(fit)
+ols_plot_dfbetas(fit)
+influence.measures(fit)
+library(car)
+influencePlot(fit)
+
+
+# 2) Checking for multicollinearity
+oly2=read.table('example_input/olympics.dat',header=TRUE)
+head(oly2)
+# i. correlation between the vars
+cor(oly2[c(1,2,3)])
+# ii. caution against Squared Multiple Correlation (SMC) >.6
+library(psych)
+smc(oly2[c(1,2,3)])
+# iii. caution against tolerance (1-SMC) <.4
+1-smc(oly2[c(1,2,3)])
+# iv. caution against Variance Inflation Factor (VIF) >10
+fit = lm(rating~years+comps,oly2)
+vif(fit)
+
+
+# 3) Checking for data normality 
+rt = read.table("example_input/data_react.csv",header = TRUE,sep = ",") 
+#This is to test if normality is significantly violated
+shapiro.test(rt$RT)
+#This is to plot the histogram with normal curve overlaid
+library(ggplot2)
+ggplot(rt, aes(RT)) + 
+  geom_histogram(aes(y = ..density..), color='black', fill='gold', bins = 30) +
+  stat_function(fun = dnorm, args = list(mean=mean(rt$RT), sd=sd(rt$RT)), col="dark red", lwd = 1.5) +
+  theme_classic()
+#This is to plot the Q-Q plot
+ggplot(rt, aes(sample=RT)) + 
+  stat_qq()+
+  stat_qq_line(color="black")
+
+
+# 4) Checking for residual normality 
+RT = read_excel("example_input/data_rt.xlsx",1)
+fit1 = lm(cfmt~benton_rt,data=RT)
+fit2 = lm(cfmt~log(benton_rt),data=RT)
+qqnorm(rstandard(fit1))
+qqnorm(rstandard(fit2))
+ols_plot_diagnostics(fit)
+```
+
+```{r}
+RT = read_excel("example_input/data_rt.xlsx",1)
+#get X and Y
+Y = RT$cfmt
+X = RT$benton_acc
+# fit linear model & get b0, b1 for Yhat
+lmfit = lm(Y~X)
+b0 = tidy(lmfit)$estimate[1]
+b1 = tidy(lmfit)$estimate[2]
+# linear model for Yhat without error
+Y_hat = b0 + b1*X
+# plot the line of Y versus Yhat
+lmfit2 = lm(Y~Y_hat)
+p1 = gf_point(Y~Y_hat) %>%
+  gf_smooth(method= 'lm',se=TRUE)
+# check if the intercept approximates 0 and slope approx 1
+intercept = tidy(lmfit2)$estimate[1]
+slope = tidy(lmfit2)$estimate[2]
+```
+
+
+
+===========================================================================
+Stats info 
+
+```{r}
+# descriptives
+cd1 = read.table("example_input/data_classdata1.txt", header = TRUE)
+Freq(cd1$TimeGrp) #check the frequency of each speed category
+mean(cd1$Time)
+mean(cd1$Time, trim = .10) #trim the top 10% and buttom 10% of the data before calculating mean
+median(cd1$Time)
+library(lsr)
+modeOf(cd1$Time)
+range(cd1$Time)
+diff(range(cd1$Time))
+quantile(cd1$Time)
+IQR(cd1$Time)
+var(cd1$Time)
+sd(cd1$Time)
+sqrt(var(cd1$Time))
+describe(cd1$Time, IQR = TRUE)
+describe(winsor(cd1$Time, trim = .10))
+
+#generate random sample at specified size that ~ N(mean,sd) or U(min,max) or B(size,prob)
+#normal
+set.seed(100); rnorm(n=100, 16.5, 4.5) 
+set.seed(1000); tibble(value = rnorm(1000, mean= 0, sd= 1))
+set.seed(1000); tibble(value = rnorm(1000, mean= .967, sd= 1))
+#uniform 
+set.seed(100); runif(n=100,min=5,max=100) 
+#binomial
+set.seed(100); rbinom(n=100, size=10, prob=.5) #10 throws of fair coin, how many heads? do this 100 times
+
+#binomial distribution: compute prob, plot binomial, find the p
+library(gtools)
+print('A(4,2) select 2 from 4: all possible selections with sequence considered')
+nrow(permutations(n=4, r=2)) 
+print('C(4,2) select 2 from 4: all possible selections, not considering sequence')
+nrow(combinations(n=4, r=2)) 
+#a basketball player makes 43% of his attempts. What is the precise probability that he will make 4 OR FEWER of his next 10 free throws? 
+p.make4 = nrow(combinations(n=10,r=4))*((.43)^4)*((1-.43)^(10-4)); p.make3 = nrow(combinations(n=10,r=3))*((.43)^3)*((1-.43)^(10-3))
+p.make2 = nrow(combinations(n=10,r=2))*((.43)^2)*((1-.43)^(10-2)); p.make1 = nrow(combinations(n=10,r=1))*((.43)^1)*((1-.43)^(10-1))
+p.make0 = (1-.43)^10; p.fewer = p.make4 + p.make3 + p.make2 + p.make1 + p.make0; p.fewer
+# or we can use the normal approximation of the binomial distribution
+z = (4-(10*.43))/sqrt(10*.43*(1-.43)); pnorm(z,0,1,lower=F)
+# generate binomial plot 
+data = data.frame(x = 0:10, y = dbinom(0:10, size = 10, prob = .5))
+ggplot(data, aes(x, y)) + geom_bar(stat = "identity", col = "blue", fill = "blue", width = .25) + labs(x = "Number of 'Heads'", y = "Probability") + theme_classic()
+# find the prob/accumulative prob/quantile
+print('P(X=25), the probability of getting 25 heads with 50 throws and a fair coin (p=.5)')
+dbinom(x=25, size=50, prob=.5) 
+print('P(X<=25), the cumulative probability of getting less or equal to 25 heads with 50 throws and a fair coin (p=.5)')
+pbinom(q=25, size=50, prob=.5) 
+print('x when P(X<=x)=.556, how many heads with 50 throws and a fair coin (p=.5) is the cumulative prob = .556?')
+qbinom(p=.556,size=50,prob=.5)
+
+#normal distirbution: find z-score, accumulative prob, prob density
+print('calculate z-score from (sample.mean-pop.mean) / (pop.std / sqrt(sample.size))')
+(1145-1060)/(199/sqrt(32))
+print('find the z-score (from the accumulated-probability/area-under-the-curve)')
+qnorm(0.9,mean=0,sd=1) #this returns the z-score of p=0.9 (the z-score that has the left area under curve of N(0,1) to be 0.9) 
+qnorm(0.1,mean=0,sd=1) #this returns the z-score of p=0.1 (the z-score that has the left area under curve of N(0,1) to be 0.1) 
+print('find the accumulated-probability/area-under-the-curve (from z-score)')
+pnorm(1.9,mean=0,sd=1) #this returns the P(Z<1.9) (the area under curve left to z-score of 1.9) 
+pnorm(-.9,mean=0,sd=1) #this returns the P(Z<-0.9) (the area under curve left to z-score of -0.9) 
+pnorm(1145, mean=1060, sd=199/sqrt(32), lower=FALSE)
+print('find the probability-density/y-of-point-on-curve (from z-score)')
+dnorm(1.9,mean=0,sd=1) #this returns the p(Z=1.9) (the probability density, or, the value of the y-axis on the curve) 
+dnorm(-.9,mean=0,sd=1) #this returns the p(Z=-.9) (the probability density, or, the value of the y-axis on the curve)
+
+#t-distribution: find t/p
+pt(q=0.2,df=8,lower=FALSE) #input t, get p; 
+pt(q=0.2,df=18,lower=FALSE) #q=z-score, df --> shape of the t-distribution
+pt(q=0.2,df=28,lower=FALSE)
+qt(p=.025, df=8,lower=FALSE) #input p, get t
+qt(p=.025, df=18,lower=FALSE) #p=alpha/2, df --> shape of the t-distribution
+qt(p=.025, df=28,lower=FALSE)
+
+#F-distribution: find f/p 
+pf(q = .77, df1 = 1, df2 = 18, lower = FALSE) #input f, get p
+qf(p = .77, df1 = 1, df2 = 18, lower = FALSE) #input p, get f
+
+#Chi-sq distribution: find chi_sq/p  
+pchisq(q = 13,df = 1,lower=F)
+qchisq(p = .0003, df=1, lower=F)
+```
+
+
+
+===========================================================================
+Stats tests 
+
+t-test
+```{r}
+# 1)
+# t-test
+RT = read_excel("example_input/data_rt.xlsx",1)
+TD= RT %>% filter(group=="0")
+DP= RT %>% filter(group=="1")
+resumes = read.csv("example_input/resumes.csv", header = TRUE)
+pre = resumes$Pre
+post = resumes$Post
+#two independent samples t-test: comparing two vectors
+t.test(TD$benton_acc,DP$benton_acc, alternative = "greater", var.equal = FALSE) 
+t.test(TD$benton_rt,DP$benton_rt, alternative = "less", var.equal = FALSE)
+#one sample t-test: comparing a vector with a population mu
+t.test(TD$cfmt,mu=mean(na.omit(TD$cfmt))-2, alternative = "two.sided") 
+#paired t-test
+t.test(pre,post, alternative = "two.sided",paired=TRUE) 
+```
+
+Correlation test
+```{r}
+# 2)
+# Correlation 
+# correlation: see r table and plots
+library(dplyr)
+roi = read_excel("./example_input/data_roi.xlsx", sheet = 4)
+roi_pre = roi %>% select(1:9,"chg_score")
+scat_table = ggpairs(roi_pre,progress=F,lower=list(continuous=wrap("smooth",method="lm")))
+corr_table = kable(cor(roi_pre, method = "pearson", use = "complete.obs"))
+corr_table
+# correlation test: get t/p/r of r
+grades = read.table("./example_input/data_grades.dat", header = TRUE)
+head(grades)
+cor.test(x = grades$SAT, y = grades$GPA, alternative = "two.sided", method = "pearson", conf.level = .95)
+#compare 2 correlations
+library(DescTools); library(psych)
+r1 = .2; r2= .6
+z.r1 = FisherZ(rho = r1) #assume this is between X and Y
+z.r2 = FisherZ(rho = r2) #assume this is between W and Z
+paired.r(xy=r1, xz=r2, n=20, n2=18)
+r.test(n=20,r12=r1,r34=r2,n2=18,twotailed=FALSE)
+#r.test(n, r12, r34 = NULL, r23 = NULL, r13 = NULL, r14 = NULL, r24 = NULL, n2 = NULL,pooled=TRUE, twotailed = TRUE)
+```
+
+F-test(anova)
+```{r}
+# 3) 
+# F-test (anova)
+fit = lm(cfmt~ffmt, RT)
+anova(fit)
+library(broom)
+tidy(anova(fit))
+tidy(fit)
+#coef
+fit$coef
+coef(fit)
+#residual
+fit$residuals
+resid(fit)
+#fitted
+fit$fitted.values
+fitted(fit)
+#df residual
+fit$df.residual
+df.residual(fit)
+#CI for b0 & b1
+confint(fit)
+```
+
+One-way ANOVA
+```{r}
+# One-way between-subject ANOVA (1 fctr, >2 lvls)
+waldo = read.table("example_input/waldo.dat", header = TRUE)
+amodel = aov(search ~ cond, waldo)
+#check model assumptions
+plot(amodel) 
+# model effect size
+library(sjstats)
+eta_sq(amodel)
+omega_sq(amodel)
+# visualize anova
+ggplot(waldo, aes(cond, search)) +
+  geom_bar(stat = "summary", fun.y = mean, aes(fill = cond)) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, width = .25) + theme_classic()
+ggplot(waldo, aes(cond, search)) +
+  geom_point(stat = "summary", fun.y = mean, aes(col = cond), size = 3) +
+  geom_errorbar(stat = "summary", fun.data = mean_se, aes(col = cond), width = .25) +
+  geom_line(lty = 2, stat = "summary", fun.y = mean, aes(group = 1)) + theme_classic()
+#pairwise t test for further testing:
+pairwise.t.test(x = waldo$search, g = waldo$cond, p.adj = "none")
+pairwise.t.test(x = waldo$search, g = waldo$cond, p.adj = "bonferroni")
+pairwise.t.test(x = waldo$search, g = waldo$cond, p.adj = "holm")
+#planned linear regression
+contrasts(waldo$cond) #check the default contrast
+c1= c(-2, 1, 1) #"ctrl vs. load (info + time)"
+c2= c(0, -1, 1) #"info vs. time"
+contrasts(waldo$cond) = cbind(c1, c2) #overwrite the default contrast for planned-contrast
+colnames(contrasts(waldo$cond)) = c("ctrl vs. load", "info vs. time")
+contrasts(waldo$cond)
+lmodel= lm(search ~ cond, waldo) 
+summary(lmodel)$coefficients
+# minimum significance threshold 
+library(agricolae)
+LSD.test(y = waldo$search, trt = waldo$cond, DFerror = 15, MSerror = 54.93, console = TRUE) #Fisher's LSD
+#From table: qcrit <- 3.989; HSD <- qcrit * sqrt((MSw/n + MSw/n)/2); HSD
+#groupdiffs <- c(xbar1-xbar2, xbar1-xbar3, xbar1-xbar4, xbar1-xbar5, xbar2-xbar3, xbar2-xbar4, xbar2-xbar5, xbar3-xbar4, xbar3-xbar5, xbar4-xbar5)
+#abs(groupdiffs) > HSD; or, TukeyHSD(Ftest4)
+HSD.test(y = waldo$search, trt = waldo$cond, DFerror = 15, MSerror = 54.93, console = TRUE) #Tukey's HSD
+# simple ANOVA as linear model
+tidy(lm(amodel))
+```
+
+Between-Subjects Factorial ANOVA
+```{r}
+#Factorial ANOVA (>1 fctr, >1 lvls per fctr)
+quiz = read.table("example_input/quiz.dat", header = TRUE)
+library(dplyr)
+#the means table (cell means)
+quiz %>%
+  group_by(version, agegrp) %>%
+  summarize(mean = mean(correct), n = n())
+#ANOVA model
+a = aov(correct ~ version + agegrp + version:agegrp, quiz)
+a = aov(correct ~ version*agegrp, quiz)
+Anova(a) #Type II SS 
+Anova(a, type = "III") #Type III SS 
+library(ggplot2)
+#visualize: main effect of version 
+ggplot(quiz, aes(version, correct)) +
+  stat_summary(fun.y = mean, geom = "bar", aes(fill = agegrp), position = "dodge") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", lwd = 1, width = .25, aes(group = agegrp), position = position_dodge(width = .9)) +
+  labs(x = "Quiz Version", y = "Number Correct", fill = "Age Group") +
+  theme_classic()
+#visualize: main effect of age 
+ggplot(quiz, aes(agegrp, correct)) +
+  stat_summary(fun.y = mean, geom = "bar", aes(fill = version), position = "dodge") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", lwd = 1, width = .25, aes(group = version), position = position_dodge(width = .9)) +
+  labs(x = "Age Group", y = "Number Correct", fill = "Quiz Version") +
+  theme_classic()
+#visualize: interaction effect
+ggplot(quiz, aes(agegrp, correct)) +
+  stat_summary(fun.y = mean, geom = "point", aes(color = version), size = 5) +
+  stat_summary(fun.y = mean, geom = "line", lwd = 2, aes(group = version, color = version)) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", aes(group = version, color = version), width = .25, lwd = 1) +
+  labs(x = "Age Group", y = "Number Correct", fill = "Quiz Version") +
+  theme_classic()
+# Simple (conditional) effects
+# compare between levels of a factor (across) at each of the levels of the other factor (fixed)
+library(phia)
+testInteractions(model = a, fixed = "version", across = "agegrp", adjust = "none") 
+testInteractions(model = a, fixed = "agegrp", across = "version", adjust = "none")
+# effect size
+library(sjstats)
+eta_sq(a)
+eta_sq(a, partial = TRUE)
+omega_sq(a)
+omega_sq(a, partial = TRUE)
+# contrasts and post-hoc tests
+# CLD() outputs all pairwise marginal mean comparisons
+library(emmeans)
+library(multcompView)
+CLD(emmeans(a, ~ version | agegrp), adjust = "none", details = TRUE)
+CLD(emmeans(a, ~ agegrp | version), adjust = "none", details = TRUE)
+# factorial ANOVA as linear model
+lm(a)
+```
+
+Repeated-Measures ANOVA
+```{r}
+# Repeated-Measures ANOVA:
+rmdata = read.table("example_input/rm.dat", header = TRUE)
+library(tidyr); library(dplyr)
+# convert wide to long format
+rmlong = rmdata %>% gather(key = "cond", value = "search", -pID) 
+rmlong$pID = factor(rmlong$pID)
+#convert from long to wide: rmwide = spread(rmlong, cond, search)
+# Error(pID/cond): cond is nested within participant (pID)
+ws = aov(search ~ cond + Error(pID/cond), rmlong)
+summary(ws)
+# if Error NOT speficied, observations are assumed to be between-subject
+bs = aov(search ~ cond, rmlong)
+summary(bs)
+# sphericity test 
+# RM-ANOVA: independence between observations is violated, so need to see if variance of the difference between groups/conditions are the same 
+ctrl_load = rmdata$Ctrl - rmdata$Load
+ctrl_time = rmdata$Ctrl - rmdata$Time
+load_time = rmdata$Load - rmdata$Time
+c(var(ctrl_load), var(ctrl_time), var(load_time))
+# ezANOVA: conduct ANOVA and auto-check sphericity, with 3 df output:
+# df1 -- ANOVA table + ges (effect size measure); 
+# df2 -- Mauchly's test for sphericity (not violated); 
+# df3 -- Greenhouse Geisser (GGe) correction + Huynh-Feldt epsilon (HFe) correction
+library(ez); ezANOVA(rmlong, dv = .(search), wid = .(pID), within = .(cond))
+# effect size for RM:
+library(sjstats)
+eta_sq(rm); eta_sq(rm, partial = TRUE); 
+omega_sq(rm); omega_sq(rm, partial = TRUE)
+# post-hoc test for RM
+pairwise.t.test(rmlong$search, rmlong$cond, paired = TRUE, p.adj = "bonferroni")
+# visualize RM 
+# exclude individual differences from errorbar (use adjusted score):
+grandMean <- mean(c(rmdata$Ctrl, rmdata$Load, rmdata$Time))
+rmdata$pMean <- (rmdata$Ctrl + rmdata$Load + rmdata$Time)/3
+rmdata$adj <- grandMean - rmdata$pMean
+rmdata$ctrl_adj <- rmdata$Ctrl + rmdata$adj
+rmdata$load_adj <- rmdata$Load + rmdata$adj
+rmdata$time_adj <- rmdata$Time + rmdata$adj
+rmlong$search_adj <- c(rmdata$ctrl_adj, rmdata$load_adj, rmdata$time_adj)
+rmlong %>% arrange(pID)
+ggplot(rmlong, aes(x = cond, y = search_adj)) +
+  stat_summary(fun = mean, geom = "bar", aes(fill = cond)) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = .25) +
+  labs(x = "Search Condition", y = "Time to Find Waldo") +
+  theme_classic()
+```
+
+Factorial RM ANOVA
+```{r}
+# Factorial RM ANOVA
+recall = read.table("example_input/recall.dat", header = TRUE)
+library(vtree); vtree(recall, vars = c("Subject", "Task", "Valence"))
+#two-way-within model:
+tww = aov(Recall ~ (Task * Valence) + Error(Subject/(Task * Valence)), recall)
+#df(Residuals) in Subject:Task = df(Task) in Subject:Task x df(Residuals) in Subject 
+summary(tww)
+#means tables (2 ways to do so)
+model.tables(tww, type = "means")
+recall %>% group_by(Task, Valence) %>% summarise(n=n(),mean=mean(Recall))
+# easy way to do the ANOVA model:
+library(ez);ezANOVA(recall, dv = .(Recall), wid = .(Subject), within = .(Task, Valence), type = 3, detailed = TRUE)
+```
+
+Mixed ANOVA (within-between)
+```{r}
+# Mixed ANOVA
+library(tidyr);library(dplyr); library(ez)
+chat = read.table("example_input//chat.dat", header = TRUE); chat
+chatlong = chat %>% gather(key = "Confed", value = "Convo", c(-ID, -Group))
+chatlong %>% arrange(ID) #group x confed between-within subjects ANOVA
+chatlong$ID = factor(chatlong$ID); chatlong$Confed = factor(chatlong$Confed)
+#specify mixed model:
+mixed = aov(Convo ~ Group*Confed + Error(ID/Confed) + Group, chatlong)
+summary(mixed)
+#ez mixed model: this output normally includes Mauchly's Test, but there is no sphericity concern here
+#(because the within-subjects factor only has 2 levels)
+ezANOVA(data = chatlong, dv = .(Convo), wid = .(ID), within = .(Confed), between = .(Group), type = 2, detailed = TRUE)
+#adjust the values for the between-subjects error
+tryMean <- mean(c(chat$Friendly[chat$Group=="Try"], chat$Unfriendly[chat$Group=="Try"])) # between-group mean1
+norMean <- mean(c(chat$Friendly[chat$Group=="Normal"], chat$Unfriendly[chat$Group=="Normal"])) # between-group mean2
+pMean <- (chat$Friendly + chat$Unfriendly)/2 #each participant's mean
+#between-group factor mean - subject mean
+adj <- NA; for(i in 1:nrow(chat)) {ifelse(chat$Group[i]=="Try",adj[i]<-tryMean-pMean[i],adj[i]<-norMean-pMean[i])}
+chat$Friendly_adj <- chat$Friendly + adj; chat$Unfriendly_adj <- chat$Unfriendly + adj; chat
+chatlong$Convo_adj <- c(chat$Friendly_adj, chat$Unfriendly_adj)
+chatlong %>% group_by(Confed,Group) %>% summarize(n=n(),adjed = mean(Convo_adj), unadj= mean(Convo))
+#visualize: unadjusted
+library(ggplot2)
+ggplot(chatlong, aes(Group, Convo)) +
+  stat_summary(fun.y = mean, geom = "bar", aes(fill = Confed), position = "dodge") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", aes(group = Confed), width = .25, position = position_dodge(.90)) +
+  theme_classic()
+#visualize: adjusted 
+ggplot(chatlong, aes(Group, Convo_adj)) +
+  stat_summary(fun.y = mean, geom = "bar", aes(fill = Confed), position = "dodge") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", aes(group = Confed), width = .25, position = position_dodge(.90)) +
+  theme_classic()
+```
+
+MANOVA (multipel DVs)
+```{r}
+# 4) 
+# MANOVA
+# short version (application)
+move = read.table('example_input/movement.dat',header=T)
+# using sleep category to predict for two dependent variables (speed and quick)
+mm = manova(cbind(speed,quick) ~ sleep, move) #cbind: needs to be a matrix (can convert df to matrix using data.matrix)
+#Using Pillai’s trace, we conclude that there was a significant effect of sleep conditions on speed and quickness, V = 0.46, F(4, 192) = 14.19, p < .001. 
+summary(mm) 
+#Separate univariate ANOVAs on the outcome variables revealed significant effects of sleep condition on both speed, F(2, 96) = 8.42, p < .001, and quickness, F(2, 96) = 23.78, p < .001.
+summary.aov(mm) 
+#DFA revealed 2 discriminant functions, accounting respectively for 81.4% and 18.6% of the variance. The first seems to be associated primarily with quickness, whereas the second is associated in opposing directions with speed. 
+dfa = lda(sleep ~ speed + quick, move); dfa 
+#Plots of these discriminant functions suggest that scores on LD1 (concerned primarily with quick) distinguish those in 3-hour sleep condition from those in the 9-hour sleep condition, whereas scores on LD2 (concerned primarily with speed) distinguish those in the 6-hour sleep condition from those in the other 2 conditions.
+move$LD1 <- predict(dfa)$x[,1]
+move$LD2 <- predict(dfa)$x[,2]
+ggplot(move, aes(LD1, LD2)) +
+  geom_text(size = 4, aes(label = sleep, color = sleep)) +
+  theme_classic()
+```
+```{r}
+# full version (computations)
+library(mvoutlier)
+words = read.table("example_input/words.dat", header = TRUE);words
+aq.plot(words[, 3:4]) #adjusted quantitile plot for outliers based on our two DVs: column 3 and 4
+#T
+SSTnum <- sum((words$number-mean(words$number))^2)
+SSTconf <- sum((words$confidence-mean(words$confidence))^2)
+CPT <- sum((words$number-mean(words$number))*(words$confidence-mean(words$confidence)))
+SSTnum; SSTconf; CPT
+#H
+SSMnum <- sum(33*(mean(words$number[words$speed == "fast"])-mean(words$number))^2,
+    33*(mean(words$number[words$speed == "normal"])-mean(words$number))^2,
+    33*(mean(words$number[words$speed == "slow"])-mean(words$number))^2)
+SSMconf <- sum(33*(mean(words$confidence[words$speed == "fast"])-mean(words$confidence))^2,
+    33*(mean(words$confidence[words$speed == "normal"])-mean(words$confidence))^2,
+    33*(mean(words$confidence[words$speed == "slow"])-mean(words$confidence))^2)
+CPM <- sum(33*((mean(words$number[words$speed == "fast"])-mean(words$number))*(mean(words$confidence[words$speed == "fast"])-mean(words$confidence))),
+    33*((mean(words$number[words$speed == "normal"])-mean(words$number))*(mean(words$confidence[words$speed == "normal"])-mean(words$confidence))),
+    33*((mean(words$number[words$speed == "slow"])-mean(words$number))*(mean(words$confidence[words$speed == "slow"])-mean(words$confidence))))
+SSMnum; SSMconf; CPM
+#E
+SSTnum-SSMnum
+SSTconf-SSMconf
+CPT-CPM
+#get test stats
+T_mat <- matrix(c(2248.51, 45.57, 45.57, 745.00), nrow = 2)
+H_mat <- matrix(c(621.90, 10.73, 10.73, 125.33), nrow = 2)
+E_mat <- matrix(c(1626.61, 34.84, 34.84, 619.68), nrow = 2)
+E_inv = solve(E_mat)
+T_mat;H_mat;E_mat;E_inv
+#get the initial $HE^{-1}$ matrix:
+HEinv <- H_mat %*% E_inv; HEinv
+#above can be obtained by extracting eigenvector coefficients:
+mm <- manova(cbind(number, confidence) ~ speed, words)
+library(candisc); candisc(mm)$coeffs.raw
+#check data dimensions
+# eyeball it:
+library(ggplot2)
+ggplot(words, aes(number, confidence)) +
+  geom_point() +
+  scale_x_continuous(limits = c(5,35)) +
+  scale_y_continuous(limits = c(-5,15))
+# draw boundry:
+find_hull <- function(words) words[chull(words$number, words$confidence), ]
+hulls <- find_hull(words)
+ggplot(words, aes(number, confidence)) +
+  geom_point() +
+  geom_polygon(data = hulls, alpha = .2)
+# circle it:
+library(ggforce);
+ggplot(words, aes(number, confidence)) +
+  geom_point() +
+  geom_ellipse(aes(x0=mean(number)+1.5,y0=mean(confidence),a=12,b=8,angle=pi/10))
+#Using the coefficients to compute discriminant function variates
+words$V1 <- candisc(mm)$coeffs.raw[1,1]*words$number + candisc(mm)$coeffs.raw[2,1]*words$confidence
+words$V2 <- candisc(mm)$coeffs.raw[1,2]*words$number + candisc(mm)$coeffs.raw[2,2]*words$confidence
+#Creating $HE^{-1}$ matrix from the discriminant function variates:
+MV <- matrix(c(36.71, 0, 0, 19.41), nrow = 2)
+EV <- matrix(c(96, 0, 0, 96), nrow = 2)
+HEVinv <- MV %*% solve(EV);
+#The off-diagonal values of the new $HE^{-1}$ matrix (cross-products) are 0
+#The diagonal values are the *eigenvalues* of the original $HE^{-1}$
+HEVinv
+#or, we can also obtain the eigenvectors from the initial HEinv:
+eigen(HEinv)$values
+# compare test statistics to an F-distribution
+summary(mm, test = "Pillai")
+summary(mm, test = "Hotelling-Lawley")
+summary(mm, test = "Wilks")
+summary(mm, test = "Roy")
+# visualizing MANOVA results
+wordslong <- words %>% gather(key = "DV", value = "value", c(-pID, -speed, -V1, -V2)); wordslong %>% arrange(pID)
+ggplot(wordslong, aes(speed, value)) +
+  stat_summary(fun = mean, geom = "bar", aes(fill = DV), position = "dodge") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", aes(group = DV),position=position_dodge(.90),lwd = 1,width = .25) +
+  theme_classic()
+# post hoc univariate tests: linear discriminant analysis
+summary.aov(mm)
+library(MASS)
+DA <- lda(speed ~ number + confidence, words)
+#V1 appears to be affected by number but not by confidence, 
+#V2 appears to be affected by confidence but not by number
+#The "trace proportions": ratios of each eigenvalue (corresponding to V1,V2) to the sum of the eigenvalues
+DA
+head(predict(DA)$x)
+#visualize: the values for each variate that we calculated as V1 and V2
+slope1 <- -0.243033440/0.005648851
+slope2 <- 0.004951098/-0.393795017
+plot(DA, col = c("red", "blue", "green4"))
+abline(a = 0, b = slope1)
+abline(a = 0, b = slope2)
+plot(DA)
+#prettier visualize:
+words$V1_cent <- words$V1 - mean(words$V1)
+words$V2_cent <- words$V2 - mean(words$V2)
+ggplot(words, aes(-V1_cent, -V2_cent)) +
+  geom_text(size = 4, aes(label = speed, color = speed)) +
+  geom_abline(intercept = 0, slope = slope1, lwd = 1) +
+  geom_abline(intercept = 0, slope = slope2, lwd = 1) +
+  labs(x = "Centered V1", y = "Centered V2") +
+  scale_x_continuous(limits = c(-4, 4)) +
+  scale_y_continuous(limits = c(-3, 3)) +
+  theme_classic()
+#Values for V1 (mostly affected by number) appear to distinguish those in the slow condition from those in the fast 
+#Values for V2 (mostly affected by confidence) appear to distinguish those in the normal from those in the other 2 conds
+```
+
+ANCOVA (analysis of covariance)
+```{r}
+library(ggplot2)
+waldo = read.table('example_input/waldo2.dat',header=T, sep=' '); waldo
+anova = aov(search~cond,waldo); summary(anova) #normal anova
+ancova = aov(search~cond+exp,waldo); summary(ancova) #exp-erience is a covaraite (continuous)
+anova(anova,ancova) #nested model F-test when added var=1 == t-test for the added predictor (f=t^2)
+
+# assumption check
+# 1) homogeneity of regression slopes: not violated
+ggplot(waldo,aes(x=exp, y=search))+ geom_point(aes(col=cond)) + 
+  geom_smooth(method='lm',se=F,aes(col=cond),fullrange=T) #plot
+slopecheck = aov(search~exp*cond,waldo); Anova(slopecheck) #test
+# 2) predictor-covariate independence: not violated
+pci = aov(exp~cond,waldo); summary(pci)
+
+#adjusted means and plot
+lm1 = lm(search~exp+cond,waldo); tidy(lm1) #a linear model for ANCOVA
+waldo$search_adj = waldo$search - (tidy(lm1)$estimate[2])*(waldo$exp - mean(waldo$exp))
+ggplot(waldo, aes(x=cond,y=search_adj))+ stat_summary(fun.y=mean, geom='bar', aes(fill=cond))+
+  stat_summary(fun.data=mean_se, geom='errorbar', width=.25)
+
+#center covariate to make intercept more interpretable
+waldo$c_exp = waldo$exp - mean(waldo$exp)
+lm2 = lm(search~ c_exp+ cond, waldo); summary(lm2) # #a linear model for ANCOVA
+```
+
+
+Binomial-test
+```{r}
+# 5) 
+# Binomial test/ sign-test
+# Consider a coin flip (p=.5): what's the chance of getting 75 heads with 100 throws?
+binom.test(x = 55, n = 100, p = .50) 
+# With 14 improvement out of 20 students, what's the evidence for improvement? 
+midterm <- c(76,70,64,77,80,84,70,89,68,61,76,76,74,96,80,78,78,69,73,80)
+final <- c(78,82,65,79,82,88,90,92,69,70,79,78,75,99,77,72,64,62,70,79)
+library(coin)
+sign_test(midterm ~ final) #test for change of sign (pos, neg) with pre to post
+pnorm(q=14, mean=20*.5,sd=sqrt(20*.5*.5), lower=F)*2 #normal approximation: 14 improved out of 20 in the norm-dist
+binom.test(x = 14, n = 20, p = .50) #binomial: how likely 14 out of 20 improved with .5 being chance level
+```
+
+Chi-Squared-test
+```{r}
+# 6)
+#Chi_sq test of goodness-of-fit   
+library(coin)
+# assume three drink flavors were equally popular; we sold 120 with the below observed frequency for each (37,58,25) 
+chocolate <- 37
+vanilla <- 58
+mint.chip <- 25
+ice.cream <- cbind(chocolate, vanilla, mint.chip)
+rownames(ice.cream) <- "Observed"
+colnames(ice.cream) <- c("Chocolate", "Vanilla", "Mint Chip")
+#Under the null hypothesis, the frequencies of each of the 3 flavors sold should all equal to 40. As test statistics are computed and confirmed below, $\chi^2$(2) = 13.95, p<.001. Therefore, we reject the null hypothesis and conclude that the popularity of the three flavors is different from what would expected if they were equally popular.
+chisq.test(x = ice.cream, p = rep(1/3,3))
+
+#Chi_sq test of independence
+no.pass <- c(39, 74)
+one.pass <- c(28, 40)
+two.or.more.pass <- c(18, 51)
+run_red <- cbind(no.pass, one.pass, two.or.more.pass)
+rownames(run_red) <- c("Ran Light", "Did Not Run Light")
+colnames(run_red) <- c("No Passengers", "One Passenger", "2+ Passengers")
+addmargins(run_red) 
+# H0: The distributions of the 2 variables (i.e. run through red lights or not, and #of passenger on the car) are independent. As test statistics computed and confirmed below, $\chi^2$(2) = 3.50, p=.174. Therefore, we fail to reject the null hypothesis, and conclude that the distribution of these two variables are independent.
+chisq.test(x = run_red, correct = FALSE)
+```
+
+
+
+===========================================================================
+# Effects (moderation/mediation):
+
+Moderation (interaction) effect:
+```{r}
+library(dplyr)
+library(pequod)
+library(interactions)
+
+mag = read.table('example_input/mag.dat',header=T)
+mag = mag %>% mutate(c_price=price-mean(price),c_stocked=stocked-mean(stocked)); #center predictors
+m1 = lm(sales~c_price+c_stocked,mag);summary(m1)
+m2 = lm(sales~c_price*c_stocked,mag); summary(m2)
+# simple slope 
+  # check predictor's effect at -1/+1 SD of the moderator)
+  # 1) R command 'simpleSlope'
+  library(pequod)
+  m3 = lmres(sales~price*stocked,centered=c('stocked','price'),mag)
+  ss = simpleSlope(m3,pred='stocked',mod1='price'); ss #predictor being stocked, moderator being price 
+  # 2) calculate:
+  mag = mag %>% mutate(lo_price = c_price + sd(c_price), hi_price = c_price - sd(c_price))
+  m4 = lm(sales~lo_price*c_stocked,mag); summary(m4)$coefficients
+  m5 = lm(sales~hi_price*c_stocked,mag); summary(m5)$coefficients
+# johnson neyman: 
+  # get the range of the moderator within which the predictor's effect is significant
+  library(interactions)
+  johnson_neyman(model=m2, pred='c_stocked', modx='c_price')
+# plot the moderation 
+  #at -1/+1 SD of the moderation
+    PlotSlope(ss) 
+  #at -1/0/+1 SD of the moderation
+    interact_plot(model=m2,pred='c_stocked',modx='c_price',line.thickness = 3)
+
+psych = read.table('example_input/exams.dat',header=T)
+psych = psych %>% mutate(c_career=career-mean(career)); psych #center type  
+# Hierachical regression for moderation
+  #public as reference
+      contrasts(psych$type) = c(1,0); contrasts(psych$type) 
+      #first step
+      m1 = lm(score~type+c_career,psych); summary(m1)
+      #second step
+      m2 = lm(score~type*c_career,psych); summary(m2)
+  #private as reference
+      contrasts(psych$type) = c(0,1); contrasts(psych$type) 
+      #new model with interaction:
+      m3 = lm(score~type*c_career,psych)
+#interaction plot & simple slopes
+  #with 1 predictor 1 moderator
+      psych$type = as.numeric(psych$type)
+      lmc3 = lm(score~type*career,psych)
+      interact_plot(model=lmc3,pred='career',modx='type',line.thickness = 3)
+      sim_slopes(model=lmc3,pred='career',modx='type')
+  #with 1 predictor 2 moderators
+      tw = lm(score~type*family*c_career,psych); summary(tw)
+      interact_plot(model=tw, pred='c_career', modx='type', mod2='family')
+      sim_slopes(model=tw,pred='c_career', modx='type', mod2='family')
+#controlling for the covariate:  
+    nm = lm(score~type*family+c_career,psych);summary(nm); anova(nm)
+    interact_plot(model=nm, pred='type',modx='family', mod2='c_career')
+```
+
+Mediation effect (a predicts c via b)
+```{r}
+library(broom)
+wtest = read.table('example_input/wtest.dat',header=T)
+#path c (predictor-outcome):
+total = lm(score ~ sleep, wtest); tidy(total)
+#path a (predictor-mediator): 
+path_a = lm(WPM ~ sleep, wtest); tidy(path_a)
+#path b (coef of mediator controlled for predictor) 
+path_b = lm(score ~ WPM + sleep, wtest); tidy(path_b)$estimate[2]
+#path c' -- direct effect (coef of predic/tor controlled for mediator): 
+tidy(path_b)$estimate[3]
+#indirect effect
+  #1) a_hat*b_hat:
+  a_hat = as.numeric(coef(path_a)[2]); b_hat = as.numeric(coef(path_b)[2])
+  IE = a_hat * b_hat; IE
+  #2) total effect - direct effect
+  coef(total)[2]-coef(path_b)[3]
+#Sobel test (for the indirect effect, i.e. mediator effect):
+  #compute
+  SE_a = summary(path_a)$coefficients[2,2]; SE_b = summary(path_b)$coefficients[2,2]
+  sIE = sqrt((a_hat^2 * SE_b^2) + (b_hat^2 * SE_a^2))
+  SobelZ = IE/sIE; SobelZ; pnorm(SobelZ, lower=F)*2
+  #check 
+  library(multilevel)
+  sobel(pred=wtest$sleep, med=wtest$WPM, out=wtest$score)
+
+#bootstrapped mediation analysis
+library(boot)
+  #returns coef of predictor and mediator
+  bootReg <- function(formula, data, i) { 
+    fit <- lm(formula, data = data[i,]) 
+    return(coef(fit)[2:3])} 
+  #returns indirect effect
+  bootMed <- function(formula1, formula2, data, i) {
+    fit1 <- lm(formula1, data = data[i,])
+    fit2 <- lm(formula2, data = data[i,]) 
+    return(coef(fit1)[2]-coef(fit2)[2])} 
+#bca CI for the direct effect
+set.seed(1)
+bootResults = boot(data = wtest, formula = lm(score ~ WPM + sleep, wtest), statistic = bootReg, R=2000)
+bootResults$t0[1]; bootResults$t[1:5,1]
+boot.ci(bootResults, type='bca', index=1)
+boot.ci(bootResults, type='bca', index=2)
+#bca CI for the indirect effect
+set.seed(1)
+bootMedResults = boot(data=wtest,statistic=bootMed,
+                      formula1=lm(score~sleep, wtest),
+                      formula2=lm(score~sleep+WPM, wtest), R=2000)
+bootMedResults$t0; bootMedResults$t[1:5,]; hist(bootMedResults$t)
+boot.ci(bootMedResults, type='bca')
+#alternative command
+library(mediation)
+med = mediate(model.m=path_a, model.y=path_b, treat='sleep',mediator='WPM', 
+              sims=2000, boot=T, boot.ci.type='bca'); summary(med)
+
+```
+
+
+===========================================================================
+# Fit regression model:
+
+```{r}
+library(tidyverse)
+
+# 1) simple/multiple linear regression
+fit0 = lm(cfmt~1,data=RT)
+fit1 = lm(cfmt~benton_acc,data=RT)
+fit2 = lm(cfmt~benton_rt1,data=RT)
+fit3 = lm(cfmt~benton_acc+benton_rt1,data=RT)
+library(broom)
+tidy(fit1)
+glance(fit1)
+summary(fit1)
+kable(anova(fit1))
+# get correlation coefficients
+library(ppcor)
+oly=read.table('example_input/olympics.dat',header=TRUE)
+head(oly)
+tidy(lm(rating~comps+years,oly))
+#semi-partial correlation coefficients
+spcor(oly)
+spcor(oly)$estimate[3, 1] #this is spcorr for comps~rating
+#partial correlation coefficients
+pcor(oly)
+pcor(oly)$estimate[3, 1] #this is pcorr for comps~rating
+
+
+# 2) binomial logistic regression
+# example 1:
+  RT = read_excel("example_input/data_rt.xlsx",1)
+  nullmod = glm(group~1, data=RT, family='binomial')
+  fit4 = glm(group~benton_acc, data=RT, family='binomial'); tidy(fit4); glance(fit4)
+  pR2=1-logLik(fit1)/logLik(nullmod);pR2 # McFadden's Pseudo-R2
+# example 2:
+  # Interpret coefficients:
+  tennis = read.table('example_input/tennis.dat',header=T)
+  fit1 = glm(outcome~practice, data=tennis,family = binomial(link='logit')); summary(fit1)
+    # 1) intercept: log odds of winning, i.e. logit(win), is -2.19 at 0-hour of practice; 
+                    #odds of winning is .11 with no practice; 
+                    #the overall probability of winning is 10% without practice.
+      coef(fit1)[1]; exp(coef(fit1)[1]); phat = (0.1121717)/(1+0.1121717); phat
+    # 2) predictor: Logit(win) increased by 24% for every 1-unit increase in practice; 
+                    #odds of winning is multiplied by 1.28 (increased 28%): 
+                                #for every 1-unit increase in practice time.  
+      coef(fit1)[2]; exp(coef(fit1)[2])
+  # Plot the model:
+    library(ggplot2); library(dplyr); 
+    tennis =tennis%>%mutate(win=1*(outcome=="win"))
+    ggplot(data=tennis, aes(x=practice, y=win))+ geom_point(size=2, color='dark blue')+
+      geom_smooth(se=F, method='glm', method.args=list(family=binomial), lwd=1.5,color='dark red')
+  # Include a second predictor:
+  fit2 = glm(outcome~practice+workout, data=tennis,family = binomial(link='logit')); summary(fit2)
+    # 1) intercept: The person's log odds of winning is 4.12, 
+                  #odds of winning is 61.56 with no practice or workout.
+      coef(fit2)[1]; exp(coef(fit2))[1]
+    # 2) predictor1: Logit(win) increases by .23 for every 1-unit increase in practice time; 
+                    #odds of winning is multiplied by 1.26 (increased by 26%) 
+                                        #for every 1-unit increase in practice.
+      coef(fit2)[2]; exp(coef(fit2))[2]
+    # 3) predictor2: Logit(win) decreases by .36 for every 1-unit increase in workout time; 
+                    #odds of winning is multiplied by .70 (decreased by 30%)        
+                                        #for every 1-unit increase in workout.
+      coef(fit2)[3]; exp(coef(fit2))[3]
+  # Likelihood Ratio test (lr test):
+  lr = deviance(fit1)-deviance(fit2)
+  lr; pchisq(q=lr, df=1, lower=F)
+  library(lmtest)
+  lrtest(fit2, fit1)
+
+# 3) multinomial logistic regression
+petdata = read.table('example_input/petowner.dat',header=T); summary(petdata)
+library(mlogit)
+petwide = mlogit.data(petdata, choice='pet', shape='wide')
+mlr = mlogit(pet~1 | extraversion, data=petwide, reflevel = 'fish'); summary(mlr)
+    #Log odds of pet = bird (compared to pet = fish) is 0.72770; the odds of pet = bird is multiplied by 2.070308 for every 1-unit increase in extraversion. 
+    #Log odds of pet = cat (compared to pet = fish) is 0.71042; the odds of pet = cat is multiplied by 2.034844 for every 1-unit increase in extraversion.  
+    #Log odds of pet = dog (compared to pet = fish) is 0.50864; the odds of pet = bird is multiplied by 1.663028 for every 1-unit increase in extraversion.  
+    #Log odds of pet = rabbit (compared to pet = fish) is 0.89053; the odds of pet = bird is multiplied by 2.436430 for every 1-unit increase in extraversion. 
+exp(mlr$coefficients)[5:8]    
+
+# 4) robust regression
+library(MASS)
+library(sfsmisc)
+fit5 = rlm(com~benton_acc+benton_rt1, data=TD) 
+tidy(fit5)
+f.robftest(fit5,var='benton_rt1')
+library(robust)
+fit6 = lmRob(com~benton_acc+benton_rt1, data=TD) 
+fit7 = glmRob(group~benton_acc+benton_rt1, data=RT, family = "binomial") 
+tidy(fit6)
+tidy(fit7)
+
+# 5) mixed effects regression
+library("lmerTest")
+roi = read_excel("/Users/lixianolivia/Desktop/PrcpLearn-fMRI2/furtherAnalysis/2_ROI/roi_data_clean.xlsx", sheet = 1)
+fit = lmer(score~ (1|sub) + PO_l + time+ time*PO_l, data=roi) #rmi=random intercept model
+summary(fit)
+glance(fit)
+```
+
+
+
+===========================================================================
+# Compare model fit:
+
+```{r}
+#anova test for nested models
+test1 = anova(fit1,fit3)
+test2 = anova(fit0,fit1)
+test3 = anova(nullmod,fit4)
+
+#likelihood ratio test for nested models
+test3 = lrtest(fit0,fit1)
+test4 = lrtest(fit1,fit3)
+test5 = lrtest(fit2,fit3)
+test6 = lrtest(nullmod,fit4)
+
+# forward stepwise
+library(orcutt)
+library(olsrr)
+fit=lm(com~benton_acc+benton_rt1+benton_rt2+age+gender+race,data=TD)
+forward.sequence = ols_step_forward_p(fit, penter = 0.20)
+plot(forward.sequence)
+ols_step_forward_aic(fit)
+vif(fit) # check if heavily collineared (>10) 
+
+# backward stepwise
+backward.sequence = ols_step_backward_p(fit, penter = 0.20)
+plot(backward.sequence)
+ols_step_backward_aic(fit)
+
+# bidirectional stepwise
+bidirect.sequence = ols_step_both_p(fit, penter = 0.20)
+plot(bidirect.sequence)
+ols_step_both_aic(fit)
+
+# stepwise alternatives 
+library(MASS)
+mydata = na.omit(TD[3:14])
+fit_full = lm(com~benton_acc+benton_rt1+benton_rt2+age+gender+race,data=mydata)
+fit_init = lm(com ~ 1, data=mydata)
+bw = stepAIC(fit,direction="backward")
+fw = stepAIC(fit_init,direction="forward",scope=list(upper=fit_full))
+bd = stepAIC(fit_init,direction="both",scope=list(upper=fit_full,lower=fit_init))
+
+```
+
+
+
+```{r}
+library(mosaic)
+library(modelr)
+library(lmtest) #all sorts of assumption tests for linear model, e.g. dwtest
+
+```
+
+
+
+
+
+=====================================ROC curve===========================================
+
+1. Generate the signal and noise Guassian distributions according to FA and Hit  
+2. Create the ROC curve (plotting the noise distribution against the signal distribution)
+
+```{r}
+#assume this is our FA nad Hit:
+FA = .3
+Hit = .45
+
+#calculate the d and beta
+c = qnorm(FA,lower=FALSE)
+cs = qnorm(Hit,lower=FALSE)
+d = c-cs
+fs.c = dnorm(cs)
+fn.c = dnorm(c)
+beta = fs.c/fn.c
+
+#creating the noise and signal+noise curves: 
+x = seq(-5,5,by=0.1) # setting the range of signal
+PX_n = pnorm(x, mean = 0, sd = 1,lower=FALSE) # P(X > c | noise only) = False alarm rate
+PX_s = pnorm(x, mean = d, sd = 1, lower=FALSE) # P(X > c | signal plus noise) = Hit rate
+df = data.frame(x, PX_n, PX_s)
+
+#plotting the ROC curve with our beta criterion marked out (slope of tangent line at the blue dot) 
+roc = ggplot(df) + xlab("P('yes'| noise)") + ylab("P('yes'| signal)") +
+  geom_line(aes(PX_n, PX_s)) + 
+  geom_point(aes(x=FA, y=Hit), colour="blue",size=5)+
+  geom_abline(slope=beta, intercept=Hit-FA*beta, color='blue',lty='twodash')+
+  geom_abline(slope = 1) +
+  ggtitle("ROC Curve") + 
+  coord_equal()
+roc
+```
+
+Still use the last example:
+1. Assume that we have 100 trials per condition (noise 100 trials, signal 100 trials). 
+   FA=.3 (100 noise: 30 'yes', 70 'no')
+   Hit=.45 (100 signal: 45 'yes', 55 'no')
+2. Contruct the roc curve just from these numbers:
+
+```{r}
+library(pROC)
+#noise trials: 'no'-70, 'yes'-30
+control =  c(rep(0, 70), rep(1, 30)) 
+#signal trials: 'no'-55, 'yes'-45
+case = c(rep(0, 55), rep(1, 45)) 
+#specificity: inverse of FA
+sdt = roc(controls=control, cases=case)
+plot(sdt)
+```
+
+
+```{r}
+library(pROC)
+#compute ROC curve from data; plot it
+data(aSAH)
+aSAH
+roc.s100b <- roc(aSAH$outcome, aSAH$s100b)
+roc.wfns <- roc(aSAH$outcome, aSAH$wfns) 
+roc.ndka <- roc(aSAH$outcome, aSAH$wfns)
+plot(roc.s100b)
+
+# Add a smoothed ROC:
+plot(smooth(roc.s100b), add=TRUE, col="blue") 
+legend("bottomright", legend=c("Empirical", "Smoothed"), col=c(par("fg"), "blue"), lwd=2)
+
+# Plot the AUC 
+plot(roc.s100b, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="lightblue", print.thres=TRUE)
+
+# To plot a different partial AUC, we need to ignore the existing value # with reuse.auc=FALSE:
+plot(roc.s100b, print.auc=TRUE, auc.polygon=TRUE, partial.auc=c(1, 0.8),
+partial.auc.focus="se", grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="lightblue",
+print.thres=TRUE, print.thres.adj = c(1, -1),
+reuse.auc=FALSE)
+# Add a second ROC curve to the previous plot: 
+plot(roc.wfns, add=TRUE)
+
+# Plot some thresholds, add them to the same plot
+plot(roc.ndka, print.thres="best", 
+     print.thres.best.method="youden")
+plot(roc.ndka, print.thres="best",
+     print.thres.best.method="closest.topleft", add = TRUE)
+plot(roc.ndka, print.thres="best",
+     print.thres.best.method="youden", 
+     print.thres.best.weights=c(50, 0.2), 
+     print.thres.adj = c(1.1, 1.25), add = TRUE)
+
+#creating the noise and signal+noise curves: 
+x = seq(-5,5,by=0.1) # setting the range of signal
+PX_n = pnorm(x, mean = 0, sd = 1,lower=FALSE) # P(X > c | noise only) = False alarm rate
+PX_s = pnorm(x, mean = 0.3987392, sd = 1, lower=FALSE) # P(X > c | signal plus noise) = Hit rate
+df = data.frame(x, PX_n, PX_s)
+df
+```
+
+
+=====================================network diagram===========================================
+
+```{r}
+library(igraph)
+library(ggraph)
+```
+
+```{r}
+# Load researcher data
+dataUU <- read.table("https://raw.githubusercontent.com/holtzy/data_to_viz/master/Example_dataset/13_AdjacencyUndirectedUnweighted.csv", header=TRUE)
+
+# Transform the adjacency matrix in a long format
+connect <- dataUU %>% 
+  gather(key="to", value="value", -1) %>%
+  na.omit()
+
+# Number of connection per person
+c( as.character(connect$from), as.character(connect$to)) %>%
+  tibble::enframe(name = NULL) %>%
+  group_by(value) %>%
+  summarise(n=n()) -> coauth
+colnames(coauth) <- c("name", "n")
+
+# Create a graph object with igraph
+mygraph <- graph_from_data_frame( connect, vertices = coauth )
+
+# Make the graph
+ggraph(mygraph, layout="fr") + 
+  #geom_edge_density(edge_fill="#69b3a2") +
+  geom_edge_link(edge_colour="black", edge_alpha=0.2, edge_width=0.3) +
+  geom_node_point(aes(size=n, alpha=n)) +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(rep(1,4), "cm")
+  ) 
+```
+
+```{r}
+# Make the graph
+ggraph(mygraph, layout="drl") + 
+  #geom_edge_density(edge_fill="#69b3a2") +
+  geom_edge_link(edge_colour="black", edge_alpha=0.2, edge_width=0.3) +
+  geom_node_point(aes(size=n, alpha=n)) +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(rep(1,4), "cm")
+  ) 
+```
+
+```{r}
+ggraph(mygraph, layout="igraph", algorithm="randomly") + 
+  #geom_edge_density(edge_fill="#69b3a2") +
+  geom_edge_link(edge_colour="black", edge_alpha=0.2, edge_width=0.3) +
+  geom_node_point(aes(size=n, alpha=n)) +
+  theme_void() +
+  theme(
+    legend.position="none",
+    plot.margin=unit(rep(1,4), "cm")
+  ) 
+```
+
+```{r}
+# Libraries
+library(igraph)
+library(networkD3)
+
+# create a dataset:
+data <- data.frame(
+  from=c(rep(1,9),rep(2,9),rep(3,9),rep(4,9),rep(5,9),rep(6,9),rep(7,9),rep(8,9),rep(9,9)),
+  to=c(rep(c(1:9),6), rep(1:3,9)) )
+
+# Plot
+p <- simpleNetwork(data, height="100px", width="100px")
+p
+
+# save the widget
+# library(htmlwidgets)
+# saveWidget(p, file=paste0( getwd(), "/HtmlWidget/networkInteractive1.html"))
+```
+
+```{r}
+# Libraries
+library(igraph)
+library(networkD3)
+
+# create a dataset:
+data <- data_frame(
+  from=c("A", "A", "B", "D", "C", "D", "E", "B", "C", "D", "K", "A", "M"),
+  to=c("B", "E", "F", "A", "C", "A", "B", "Z", "A", "C", "A", "B", "K") )
+
+# Plot
+p <- simpleNetwork(data, height="100px", width="100px",        
+        Source = 1,                 # column number of source
+        Target = 2,                 # column number of target
+        linkDistance = 10,          # distance between node. Increase this value to have more space between nodes
+        charge = -900,                # numeric value indicating either the strength of the node repulsion (negative value) or attraction (positive value)
+        fontSize = 14,               # size of the node names
+        fontFamily = "serif",       # font og node names
+        linkColour = "#666",        # colour of edges, MUST be a common colour for the whole graph
+        nodeColour = "#69b3a2",     # colour of nodes, MUST be a common colour for the whole graph
+        opacity = 0.9,              # opacity of nodes. 0=transparent. 1=no transparency
+        zoom = T                    # Can you zoom on the figure?
+        )
+p
+
+# save the widget
+# library(htmlwidgets)
+# saveWidget(p, file=paste0( getwd(), "/HtmlWidget/networkInteractive2.html"))
+```
+
+
+=====================================scripts wrote earlier===========================================
+
+```{r}
+library(readxl) 
+library(dplyr)
+library(psych)
+library(DescTools)
+
+filelist = list.files('/Users/xianl/Desktop/FreeR_data/results/plots/try/','.xlsx')
+print(filelist)
+counter=0
+sub.merge=tibble()
+corr = tibble()
+for(i in 1:length(filelist)) {
+  for (j in 1:30){
+    try.name = paste('sub',as.character(j),'.xlsx',sep='')
+    if (grepl(try.name,filelist[i])==TRUE){
+      print(try.name)
+      
+      full.path = paste('/Users/xianl/Desktop/FreeR_data/results/plots/try/',try.name,sep='')
+      sub = read_excel(full.path,1)
+      
+      name = paste('sub',as.character(j),sep='')
+      caus = as.numeric(sub$CausalityCent)
+      caus_z = (caus-mean(caus))/sd(caus)
+      sem = as.numeric(sub$SemanticCent)
+      sem_z = (sem-mean(sem))/sd(sem)
+      rcl = as.numeric(sub$RecallProb)
+      rcl_z = (rcl-mean(rcl))/sd(rcl)
+      
+      sub = tibble(sub.num=j, 
+         event=as.numeric(sub$Events),
+         sem.z = sem_z,
+         caus.z= caus_z, 
+         rcl.z = rcl_z,
+         recall=sub$RecallProb, 
+         sem=sub$SemanticCent, 
+         caus=sub$CausalityCent)
+      sub.merge=rbind(sub.merge,sub)
+      
+      
+      sem.rcl = cor.test(sem_z,rcl_z)
+      caus.rcl = cor.test(caus_z,rcl_z)
+      sem.caus = cor.test(sem_z,caus_z)
+      sub.corr = tibble(sub.num=j,
+        sem.rcl.r = tidy(sem.rcl)$estimate,
+        sem.rcl.p = tidy(sem.rcl)$p.value,
+        sem.rcl.95ci.low = tidy(sem.rcl)$conf.low,
+        sem.rcl.95ci.high = tidy(sem.rcl)$conf.high,
+        
+        caus.rcl.r = tidy(caus.rcl)$estimate,
+        caus.rcl.p = tidy(caus.rcl)$p.value,
+        caus.rcl.95ci.low = tidy(caus.rcl)$conf.low,
+        caus.rcl.95ci.high = tidy(caus.rcl)$conf.high,
+        
+        sem.caus.r = tidy(sem.caus)$estimate,
+        sem.caus.p = tidy(sem.caus)$p.value,
+        sem.caus.95ci.low = tidy(sem.caus)$conf.low,
+        sem.caus.95ci.high = tidy(sem.caus)$conf.high,
+        
+        sem.rcl.r.z = FisherZ(tidy(sem.rcl)$estimate),
+        caus.rcl.r.z = FisherZ(tidy(caus.rcl)$estimate),
+        sem.caus.r.z = FisherZ(tidy(sem.caus)$estimate))
+      corr = rbind(corr,sub.corr)
+      
+      counter=counter+1
+      print(counter)}
+  }
+}
+
+sub.merge
+```
+
+
+
+
